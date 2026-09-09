@@ -1,1 +1,77 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+.env/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Config with local overrides ---
+config/local_settings.py
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+notebooks/*.ipynb_checkpoints
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
 .DS_Store
+Thumbs.db
+
+# --- Data: raw source datasets (large, external — don't commit) ---
+data/raw/
+data/SocraTeach_multi.json
+data/SocraTeach_single.json
+data/dpo_socratic.json
+
+# --- Data: derived/intermediate preprocessing outputs (regenerable) ---
+preprocessing/output/
+*.csv
+!domain/misconception_taxonomy/*.csv   # keep hand-labeled taxonomy CSVs if stored as csv
+
+# --- Embeddings / vector index (regenerable, often large/binary) ---
+domain/retrieval/index/
+*.faiss
+*.index
+embeddings_cache/
+
+# --- Golden set: KEEP tracked (small, hand-labeled, source of truth) ---
+!evaluation/golden_set.jsonl
+
+# --- Logs ---
+*.log
+logs/
+
+# --- DB ---
+*.sqlite3
+*.db
+
+# --- Model / eval run artifacts ---
+eval_runs/
+*.ckpt
+
+# --- Test cache ---
+.pytest_cache/
+.coverage
+htmlcov/
