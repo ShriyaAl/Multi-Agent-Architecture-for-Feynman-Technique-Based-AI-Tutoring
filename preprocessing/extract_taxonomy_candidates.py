@@ -28,8 +28,8 @@ def main():
         for i, step_text in enumerate(steps):
             rows.append({
                 "problem_id": problem_id,
-                "question": question[:200],
-                "analysis": analysis[:300],
+                "question": question,
+                "analysis": analysis,
                 "answer": answer,
                 "step_index": i,
                 "step_text": step_text,
