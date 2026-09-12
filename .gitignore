@@ -44,6 +44,7 @@ data/raw/
 data/SocraTeach_multi.json
 data/SocraTeach_single.json
 data/dpo_socratic.json
+data/
 
 # --- Data: derived/intermediate preprocessing outputs (regenerable) ---
 preprocessing/output/

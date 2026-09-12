@@ -1,0 +1,89 @@
+# Phase 1: Building the Misconception Taxonomy
+
+## What we're building
+A short, curated list (8–15 entries) of the specific, recurring ways students
+get a topic wrong. Each entry ("node") is tagged to one of four dimensions:
+**completeness, accuracy, clarity, coherence**. This list is the reference the
+diagnosis agent checks a student's explanation against — instead of the AI
+vaguely deciding "this seems incomplete," it points to a specific, named,
+pre-defined gap.
+
+As a byproduct, this same extraction produces reusable examples for the
+Socratic agent (Phase 3) — see "Secondary output" below.
+
+## Why we need this before writing any agent code
+Without a fixed list of known gaps, the diagnosis step has nothing concrete to
+compare against — it would be guessing in an unanchored way. This taxonomy is
+the "answer key" that makes the whole system's diagnosis interpretable rather
+than a black box.
+
+## Where the raw material comes from — and a correction to our first approach
+We use SocraTeach, a public dataset of real teacher-student math dialogues.
+
+Our first attempt extracted candidates from each problem's `steps` field — a
+short, fixed checklist of guiding questions per problem (e.g. "find the total,"
+"find the amount given away," "find the remainder"). This turned out to be too
+thin a source: `steps` is a generic, pre-planned decomposition of the problem,
+not a reaction to an actual student error, and for simple arithmetic problems
+it often contains no diagnosable reasoning at all — just a sequence of "what
+number do you need next" prompts. It also produces very little data.
+
+**Corrected approach:** we extract from `dialogues` instead — specifically,
+consecutive `(student turn, teacher's next turn)` pairs. The teacher's message
+immediately following a student's response is a real reaction to something
+that student said — a correction, a probing question, a request for
+clarification. That reaction is a much more direct and specific signal of a
+real misconception than a generic checklist, and there is far more of it:
+every dialogue variant of every problem contributes multiple such pairs,
+giving hundreds of candidates per topic instead of a handful.
+
+## The method, in plain terms
+1. Filter the dataset down to problems on our chosen topic (keyword match on
+   `question` + `analysis`).
+2. For every dialogue, walk through consecutive turns. For each student turn,
+   pair it with the teacher's very next message.
+3. For each pair, ask: **"why did the teacher respond this way — what was
+   wrong, missing, unclear, or disconnected in what the student just said?"**
+   Write that down in plain language (`inferred_gap`), and classify it into
+   one of the four dimensions (`dimension`).
+4. Skip pairs that don't reveal a real reasoning gap — small talk,
+   encouragement, or a teacher simply moving the conversation forward with no
+   correction. Not every pair is usable, and that's expected; be selective
+   rather than forcing a label onto every row.
+5. Many pairs turn out to describe the same underlying mistake in different
+   words — we merge those into one final entry during consolidation.
+6. The result is a short list of distinct, named misconceptions — our
+   taxonomy — saved as a simple YAML file.
+7. A second person independently labels a sample of the same data, and we
+   compare notes — this catches cases where our dimension definitions were too
+   fuzzy, and makes the final taxonomy more trustworthy.
+
+## Secondary output: Socratic-agent examples
+While reading each `(student_said, teacher_followup)` pair for the taxonomy
+label, we also mark a `good_socratic_example` flag (yes/no): does the
+teacher's response guide with a targeted question, rather than just stating
+the correct answer directly? Pairs marked "yes" become topic-specific few-shot
+examples for the Socratic agent later (Phase 3), alongside the separate DPO
+dataset's more general Socratic-vs-direct-answer contrast pairs. This costs
+almost nothing extra since we're already reading the pair closely for the
+taxonomy label — it just saves re-reading the same data again later.
+
+## Worked example
+> Student said: "70 minus 10 is 60, so that's the answer for the dogs and
+> cats."
+> Teacher's next message: "You said dogs and cats — the question only asks
+> about dogs. Which animal were we tracking here?"
+
+→ Inferred gap: conflates the two animal categories instead of tracking only
+  the one the question asks about.
+→ Dimension: **clarity** (the student's statement is ambiguous about which
+  quantity is being referred to).
+→ good_socratic_example: yes (teacher asks a targeted question rather than
+  just stating "it's dogs, not both").
+
+## Output of this phase
+- `taxonomy.yaml` — 8 to 15 entries, each with an id, a short description, and
+  a dimension tag. This is the fixed reference point for every following
+  phase of the project.
+- A tagged subset of `(student_said, teacher_followup)` pairs marked as good
+  Socratic examples, held for reuse in Phase 3.
