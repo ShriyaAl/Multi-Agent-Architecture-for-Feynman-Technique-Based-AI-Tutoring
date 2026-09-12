@@ -8,82 +8,104 @@ diagnosis agent checks a student's explanation against — instead of the AI
 vaguely deciding "this seems incomplete," it points to a specific, named,
 pre-defined gap.
 
-As a byproduct, this same extraction produces reusable examples for the
-Socratic agent (Phase 3) — see "Secondary output" below.
-
 ## Why we need this before writing any agent code
 Without a fixed list of known gaps, the diagnosis step has nothing concrete to
-compare against — it would be guessing in an unanchored way. This taxonomy is
-the "answer key" that makes the whole system's diagnosis interpretable rather
-than a black box.
+compare against. This taxonomy is the "answer key" that makes the system's
+diagnosis interpretable rather than a black box.
 
-## Where the raw material comes from — and a correction to our first approach
-We use SocraTeach, a public dataset of real teacher-student math dialogues.
+## Data sources
 
-Our first attempt extracted candidates from each problem's `steps` field — a
-short, fixed checklist of guiding questions per problem (e.g. "find the total,"
-"find the amount given away," "find the remainder"). This turned out to be too
-thin a source: `steps` is a generic, pre-planned decomposition of the problem,
-not a reaction to an actual student error, and for simple arithmetic problems
-it often contains no diagnosable reasoning at all — just a sequence of "what
-number do you need next" prompts. It also produces very little data.
+We draw from two datasets, used differently because of how each is structured.
 
-**Corrected approach:** we extract from `dialogues` instead — specifically,
-consecutive `(student turn, teacher's next turn)` pairs. The teacher's message
-immediately following a student's response is a real reaction to something
-that student said — a correction, a probing question, a request for
-clarification. That reaction is a much more direct and specific signal of a
-real misconception than a generic checklist, and there is far more of it:
-every dialogue variant of every problem contributes multiple such pairs,
-giving hundreds of candidates per topic instead of a handful.
+### Source 1: SocraTeach
+A large (35K dialogue) dataset of simulated teacher-student math tutoring
+conversations. No field directly states "what the student got wrong" — instead,
+we infer it from the teacher's *reaction*.
 
-## The method, in plain terms
-1. Filter the dataset down to problems on our chosen topic (keyword match on
-   `question` + `analysis`).
-2. For every dialogue, walk through consecutive turns. For each student turn,
-   pair it with the teacher's very next message.
-3. For each pair, ask: **"why did the teacher respond this way — what was
-   wrong, missing, unclear, or disconnected in what the student just said?"**
-   Write that down in plain language (`inferred_gap`), and classify it into
-   one of the four dimensions (`dimension`).
-4. Skip pairs that don't reveal a real reasoning gap — small talk,
-   encouragement, or a teacher simply moving the conversation forward with no
-   correction. Not every pair is usable, and that's expected; be selective
-   rather than forcing a label onto every row.
-5. Many pairs turn out to describe the same underlying mistake in different
-   words — we merge those into one final entry during consolidation.
-6. The result is a short list of distinct, named misconceptions — our
-   taxonomy — saved as a simple YAML file.
-7. A second person independently labels a sample of the same data, and we
-   compare notes — this catches cases where our dimension definitions were too
-   fuzzy, and makes the final taxonomy more trustworthy.
+**Method:** For each dialogue, we extract consecutive
+`(student turn, teacher's next turn)` pairs. The teacher's response immediately
+following a student's turn is a reaction to something specific in that turn —
+a correction, a probing question, a request for clarification. We read the
+pair and ask: *"why did the teacher respond this way — what was wrong,
+missing, unclear, or disconnected in what the student just said?"* — writing
+the answer as `inferred_gap`, then classifying it into one of the four
+dimensions.
 
-## Secondary output: Socratic-agent examples
-While reading each `(student_said, teacher_followup)` pair for the taxonomy
-label, we also mark a `good_socratic_example` flag (yes/no): does the
-teacher's response guide with a targeted question, rather than just stating
-the correct answer directly? Pairs marked "yes" become topic-specific few-shot
-examples for the Socratic agent later (Phase 3), alongside the separate DPO
-dataset's more general Socratic-vs-direct-answer contrast pairs. This costs
-almost nothing extra since we're already reading the pair closely for the
-taxonomy label — it just saves re-reading the same data again later.
+We initially tried extracting from the dataset's `steps` field (a fixed,
+generic checklist of guiding questions per problem), but found it too thin —
+`steps` is a pre-planned decomposition of the problem, not a reaction to an
+actual student error, and often contains no diagnosable reasoning for simple
+problems. The turn-pair approach above replaced this and yields far more
+usable material.
 
-## Worked example
-> Student said: "70 minus 10 is 60, so that's the answer for the dogs and
-> cats."
-> Teacher's next message: "You said dogs and cats — the question only asks
-> about dogs. Which animal were we tracking here?"
+We also found that later turns in a dialogue increasingly show a student who
+has already been successfully guided to understanding — since these
+dialogues are built around demonstrating successful tutoring outcomes. To
+counter this, we bias extraction toward early turns (`turn_index` 0–1) in
+each dialogue, where the unscaffolded, original misconception is most likely
+still present.
 
-→ Inferred gap: conflates the two animal categories instead of tracking only
-  the one the question asks about.
-→ Dimension: **clarity** (the student's statement is ambiguous about which
-  quantity is being referred to).
-→ good_socratic_example: yes (teacher asks a targeted question rather than
-  just stating "it's dogs, not both").
+### Source 2: MathDial
+A publicly released (CC BY-SA 4.0), academically-produced dataset of 2,861
+real teacher–simulated-student tutoring dialogues, each built around one
+student's incorrect solution to a math word problem. Unlike SocraTeach, this
+dataset directly names the misconception: the `teacher_described_confusion`
+field is a human teacher's free-text description of exactly what the student
+misunderstood.
+
+**Method:** No reverse-engineering is needed here — `teacher_described_confusion`
+becomes `inferred_gap` directly. Our labeling task narrows to: read the given
+confusion description alongside `student_incorrect_solution` and
+`question`/`ground_truth`, and classify it into one of the four dimensions.
+
+Because MathDial is built specifically around students holding an incorrect
+belief that leads to a wrong solution, its confusions skew heavily toward the
+**accuracy** dimension (a stated wrong rule/procedure). This is expected and
+not a labeling error — SocraTeach's natural conversational text is our primary
+source for completeness/clarity/coherence examples, since vague wording,
+skipped steps, and disconnected reasoning show up more naturally there.
+
+### Combining the two
+Both sources feed the same `taxonomy_draft.csv`-style sheet, with a
+`source_dataset` column so we can track provenance and check dimension
+balance across the combined set (not per-source) once labeling is done.
+
+## The labeling method, in plain terms
+
+For **every** row, regardless of source:
+
+1. Decide `label_type` first: `diagnosable`, `no_attempt`, `student_question`,
+   or `off_topic`. Only `diagnosable` rows get dimension-labeled — the rest
+   are set aside as Gate-agent material (see note below).
+2. For diagnosable rows, apply the four questions **in this order**, stopping
+   at the first "yes":
+   - Is something stated **factually wrong**? → **accuracy**
+   - Is something required **simply absent**? → **completeness**
+   - Is what's there **unclear/ambiguous**? → **clarity**
+   - Do the stated pieces **fail to logically connect**, even though each is
+     individually correct and clear? → **coherence**
+3. Multiple dimensions may apply, but only tag more than one if each is a
+   genuinely independent issue — test: *"if I fixed only this one thing and
+   left everything else as-is, would the explanation now be fine on this
+   axis?"* If yes, it's independent and can be co-tagged. If the "issue" only
+   exists because another dimension is broken (e.g., "needs to finish the
+   next step" mislabeled as coherence when it's really completeness), don't
+   co-tag it.
+4. Write `inferred_gap` as a description of the **misconception itself** (what
+   the student believes/did), not the fix — this makes the phrase reusable as
+   a taxonomy node that other explanations can be matched against.
+5. Consolidate near-duplicate gaps across both sources into a smaller set of
+   distinct nodes (target: 8–15 total).
+6. Write the final list to `taxonomy.yaml`.
+7. A second person independently labels a sample from both sources; compare
+   and resolve disagreements by sharpening dimension definitions.
+
+## A note on non-diagnosable rows
+Rows tagged `no_attempt`, `student_question`, or `off_topic` are not discarded
+— they're saved separately as future validation material for the **Gate
+agent** (a later component that screens low-effort/off-topic responses before
+they ever reach diagnosis).
 
 ## Output of this phase
-- `taxonomy.yaml` — 8 to 15 entries, each with an id, a short description, and
-  a dimension tag. This is the fixed reference point for every following
-  phase of the project.
-- A tagged subset of `(student_said, teacher_followup)` pairs marked as good
-  Socratic examples, held for reuse in Phase 3.
+`taxonomy.yaml` — 8 to 15 entries, each with an id, description, and dimension
+tag, drawn from and cross-checked against two independent real-world sources.
