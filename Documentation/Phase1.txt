@@ -109,3 +109,64 @@ they ever reach diagnosis).
 ## Output of this phase
 `taxonomy.yaml` — 8 to 15 entries, each with an id, description, and dimension
 tag, drawn from and cross-checked against two independent real-world sources.
+
+
+# Phase 1: Misconception Taxonomy — COMPLETE
+
+## What was built
+`domain/misconception_taxonomy/taxonomy.yaml` — a curated list of 8–15
+distinct misconception nodes, each with an `id`, plain-language `description`,
+and a `dimension` tag (completeness / accuracy / clarity / coherence).
+
+## Data sources used
+1. **SocraTeach** — simulated teacher-student math dialogues. Extracted
+   consecutive `(student turn, teacher's next turn)` pairs; the teacher's
+   reaction to each student turn was used to infer what was wrong, missing,
+   unclear, or disconnected in that turn.
+2. **MathDial** — openly licensed (CC BY-SA 4.0) academic dataset of
+   teacher–student dialogues, each built around one student's incorrect
+   solution. Its `teacher_described_confusion` field gave the misconception
+   directly, in the teacher's own words — no reverse-engineering needed here,
+   only dimension classification.
+
+## Process followed
+1. Extracted raw candidate rows from both sources into CSVs
+   (`taxonomy_draft.csv`, `mathdial_draft.csv`), each row pairing a student
+   response with either a teacher follow-up (SocraTeach) or a pre-given
+   confusion description (MathDial).
+2. Hand-labeled each usable row with:
+   - `label_type` — `diagnosable`, `no_attempt`, `student_question`, or
+     `off_topic` (only `diagnosable` rows proceed to dimension labeling; the
+     rest are held aside as future Gate-agent validation material).
+   - `inferred_gap` — a plain-language description of the misconception
+     itself (the belief/behavior, not the fix).
+   - `dimension` — assigned using a fixed decision order: accuracy →
+     completeness → clarity → coherence, stopping at the first that applies.
+     Multiple dimensions were only co-tagged when each was independently
+     verifiable (fixing one alone would not resolve the other).
+3. Consolidated all labeled `inferred_gap` entries across both sources,
+   grouped by dimension, merging near-duplicate phrasings into single
+   distinct nodes.
+4. Converted the final consolidated list into `taxonomy.yaml` via a
+   validated conversion script (checks for duplicate IDs, invalid dimension
+   values, and missing fields before writing).
+5. A second labeler independently reviewed the clustering and dimension
+   assignments; disagreements were resolved by sharpening dimension
+   definitions.
+
+## Known limitations, noted for the methodology writeup
+- MathDial's confusions skew toward **accuracy** by construction (the dataset
+  is built around students holding one incorrect belief that produces a wrong
+  solution) — completeness/clarity/coherence representation relies more
+  heavily on SocraTeach.
+- SocraTeach's later dialogue turns skew toward "student has already
+  understood," since these dialogues are built to demonstrate successful
+  tutoring outcomes — extraction was biased toward early turns to counter
+  this, but full elimination of the skew isn't guaranteed.
+- Non-diagnosable rows (no attempt, off-topic, clarifying questions) were
+  set aside rather than discarded, for later use in the Gate agent.
+
+## Output
+`taxonomy.yaml`, finalized and cross-checked, sitting at
+`domain/misconception_taxonomy/taxonomy.yaml`. This is now the fixed
+reference every downstream diagnosis, and this golden-set labeling, refers to.

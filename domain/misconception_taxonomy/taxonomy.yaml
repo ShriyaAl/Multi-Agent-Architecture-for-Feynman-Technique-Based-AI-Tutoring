@@ -1,0 +1,67 @@
+- id: wrong_fraction
+  description: Repeatedly using the wrong fraction
+  dimension: accuracy
+- id: doubly_subtracting_or_doubly_adding
+  description: Doesn't realize they are doubly adding or subtracting the given numbers
+  dimension: accuracy
+- id: additon_subtraction_error
+  description: Basic mistakes made when doing simple addition and subtraction
+  dimension: accuracy 
+- id: ratio_confusion
+  description: Confusion in the rations and fractions given in the question
+  dimension: accuracy
+- id: wrong_order_solving
+  description: Solving the problem in the wrong order hence resulting in wrong answer
+  dimension: accuracy
+- id: unnecessary_steps
+  description: Did extra steps giving wrong answer
+  dimension: accuracy
+- id: multiply_division_error
+  description: Did errors in multiplying and dividing given numbers
+  dimension: accuracy
+- id: step_calculation
+  description: The step is right but calculation error
+  dimension: accuracy
+- id: confusing_numbers
+  description: Doing operations on the wrong set of numbers accidentally
+  dimension: clarity
+- id: interpretation_differnce
+  description: Interpreted question differently from what was expected
+  dimension: clarity
+- id: confusing_operations
+  description: Got confused while applying operations on the set of numbers on how
+    to do it
+  dimension: clarity
+- id: unclear_question
+  description: Questing wasn't clear causing student to interpret it wrongly
+  dimension: clarity
+- id: assume_values
+  description: Assumed values while performing calculation
+  dimension: clarity
+- id: missed_details
+  description: Missed problem statement details while solving
+  dimension: coherence
+- id: no_link_in_steps
+  description: The steps done were correct but student lost track of the flow
+  dimension: coherence
+- id: solution_organisation_confusion
+  description: Confusion in the orgainsation of the solution
+  dimension: coherence
+- id: break_down_concept
+  description: The solution has just understood the concept and follow up on the next
+    step is to be done
+  dimension: coherence
+- id: follow_up
+  description: The student has understood the concept and follow up on the next step
+  dimension: completeness
+- id: proceed_next
+  description: The student understood the corrent step and needs to know what is the
+    next step
+  dimension: completeness
+- id: concept_not_understood
+  description: The student is not sure of the concept and hence doesn't know what
+    to do
+  dimension: completeness
+- id: incomplete_concept
+  description: concept not fully understood only partially done
+  dimension: completeness
