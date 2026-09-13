@@ -44,6 +44,7 @@ data/raw/
 data/SocraTeach_multi.json
 data/SocraTeach_single.json
 data/dpo_socratic.json
+data/
 
 # --- Data: derived/intermediate preprocessing outputs (regenerable) ---
 preprocessing/output/
@@ -58,6 +59,7 @@ embeddings_cache/
 
 # --- Golden set: KEEP tracked (small, hand-labeled, source of truth) ---
 !evaluation/golden_set.jsonl
+output/golden_set_candidates.xlsx
 
 # --- Logs ---
 *.log

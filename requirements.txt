@@ -32,3 +32,12 @@ tqdm>=4.66.0
 # transformers>=4.45.0
 # datasets>=2.21.0
 # torch>=2.4.0               # match to your CUDA version
+
+
+ollama 
+google-genai 
+pydantic pyyaml 
+pandas 
+python-dotenv 
+pytest 
+pytest-mock

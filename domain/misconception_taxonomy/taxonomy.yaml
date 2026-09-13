@@ -1,0 +1,130 @@
+# - id: wrong_fraction
+#   description: Repeatedly using the wrong fraction
+#   dimension: accuracy
+# - id: doubly_subtracting_or_doubly_adding
+#   description: Doesn't realize they are doubly adding or subtracting the given numbers
+#   dimension: accuracy
+# - id: additon_subtraction_error
+#   description: Basic mistakes made when doing simple addition and subtraction
+#   dimension: accuracy 
+# - id: ratio_confusion
+#   description: Confusion in the rations and fractions given in the question
+#   dimension: accuracy
+# - id: wrong_order_solving
+#   description: Solving the problem in the wrong order hence resulting in wrong answer
+#   dimension: accuracy
+# - id: unnecessary_steps
+#   description: Did extra steps giving wrong answer
+#   dimension: accuracy
+# - id: multiply_division_error
+#   description: Did errors in multiplying and dividing given numbers
+#   dimension: accuracy
+# - id: step_calculation
+#   description: The step is right but calculation error
+#   dimension: accuracy
+# - id: confusing_numbers
+#   description: Doing operations on the wrong set of numbers accidentally
+#   dimension: clarity
+# - id: interpretation_differnce
+#   description: Interpreted question differently from what was expected
+#   dimension: clarity
+# - id: confusing_operations
+#   description: Got confused while applying operations on the set of numbers on how
+#     to do it
+#   dimension: clarity
+# - id: unclear_question
+#   description: Questing wasn't clear causing student to interpret it wrongly
+#   dimension: clarity
+# - id: assume_values
+#   description: Assumed values while performing calculation
+#   dimension: clarity
+# - id: missed_details
+#   description: Missed problem statement details while solving
+#   dimension: coherence
+# - id: no_link_in_steps
+#   description: The steps done were correct but student lost track of the flow
+#   dimension: coherence
+# - id: solution_organisation_confusion
+#   description: Confusion in the orgainsation of the solution
+#   dimension: coherence
+# - id: break_down_concept
+#   description: The solution has just understood the concept and follow up on the next
+#     step is to be done
+#   dimension: coherence
+# - id: follow_up
+#   description: The student has understood the concept and follow up on the next step
+#   dimension: completeness
+# - id: proceed_next
+#   description: The student understood the corrent step and needs to know what is the
+#     next step
+#   dimension: completeness
+# - id: concept_not_understood
+#   description: The student is not sure of the concept and hence doesn't know what
+#     to do
+#   dimension: completeness
+# - id: incomplete_concept
+#   description: concept not fully understood only partially done
+#   dimension: completeness
+
+
+# --- ACCURACY ---
+- id: wrong_operation_applied
+  description: Applies the wrong arithmetic operation, or makes an execution error while applying an operation (addition, subtraction, multiplication, or division)
+  dimension: accuracy
+
+- id: doubly_subtracting_or_doubly_adding
+  description: Doesn't realize they are double-counting — subtracting or adding the same given number more than once
+  dimension: accuracy
+
+- id: wrong_fraction
+  description: Repeatedly uses the wrong fraction to represent a quantity in the problem
+  dimension: accuracy
+
+- id: ratio_confusion
+  description: Confuses how the ratio and fraction values given in the question relate to each other
+  dimension: accuracy
+
+- id: wrong_order_solving
+  description: Solves the problem's steps in the wrong order, producing a wrong answer even though individual operations may be correct
+  dimension: accuracy
+
+- id: unnecessary_steps
+  description: Introduces extra, unneeded steps that lead to a wrong answer
+  dimension: accuracy
+
+- id: confusing_numbers
+  description: Performs a correct operation but on the wrong set of numbers from the problem
+  dimension: accuracy
+
+- id: assumes_missing_values
+  description: Assumes a value not given in the problem, instead of deriving or requesting it
+  dimension: accuracy
+
+- id: misreads_problem
+  description: Interprets what the question is asking differently from what was actually asked, leading to solving a different problem
+  dimension: accuracy
+
+# --- COMPLETENESS ---
+- id: needs_next_step
+  description: Correctly understands and completes the current step, but stops before taking the next required step toward the final answer
+  dimension: completeness
+
+- id: concept_not_understood
+  description: Is unsure of the underlying concept entirely and doesn't know how to proceed
+  dimension: completeness
+
+- id: incomplete_concept
+  description: Understands the concept only partially, applying it in some places but not fully carrying it through
+  dimension: completeness
+
+- id: missed_details
+  description: Omits a detail given in the problem statement while solving, leading to an incomplete or incorrect setup
+  dimension: completeness
+
+# --- COHERENCE ---
+- id: disorganized_reasoning
+  description: Performs individually correct steps but loses track of how they connect, or presents the solution in a disorganized way that obscures the reasoning flow
+  dimension: coherence
+
+# --- CLARITY ---
+# No nodes currently — see note below.
