@@ -1,0 +1,28 @@
+# Phase 2: Golden Set 
+
+## What was built
+`golden_set.csv` — a labeled set of real student explanations, each scored
+against the finalized `taxonomy.yaml` on four dimensions, with gap references
+where applicable.
+
+## Process
+1. Pulled stratified candidate rows from both labeled source drafts
+   (SocraTeach, MathDial) via `build_golden_candidates.py`.
+2. For each row: scored `completeness_score` / `accuracy_score` /
+   `clarity_score` / `coherence_score` (0/1/2 scale), and set `gap_tags`
+   (semicolon-separated taxonomy node IDs) where a real gap exists.
+3. Rows with no genuine gap (fully correct, complete, clear, coherent
+   explanations — including ones originally mislabeled with a dimension that
+   actually described the teacher's next move rather than a student error)
+   were corrected to negative controls: blank `dimension`/`gap_tags`, scores
+   of 2 across all four axes.
+4. Validated: every `gap_tags` value resolves to a real `taxonomy.yaml` node
+   ID (no typos); flagged nodes never referenced by any row as a known
+   coverage limitation; checked no row's `gap_tags` dimension contradicts its
+   own score for that dimension.
+
+## Known limitations
+- Coverage across taxonomy nodes is uneven — some nodes have no example in
+  the golden set.
+- Clarity dimension is under-represented in raw source material; most real
+  gaps found were accuracy or completeness issues.

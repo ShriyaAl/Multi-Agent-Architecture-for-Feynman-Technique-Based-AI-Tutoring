@@ -1,0 +1,86 @@
+# Phase 3: Diagnosis Agent — Initial Validation Complete (needs iteration)
+
+## What was built
+`DiagnosisAgent` — takes a question, student explanation, and reference
+answer, and returns a `DiagnosisResult` with a 0/1/2 score, matched taxonomy
+`gap_tags`, and a one-sentence reasoning justification, per dimension
+(completeness, accuracy, clarity, coherence).
+
+## Architecture
+- Retrieval is a plain lookup against `taxonomy.yaml` (no vector DB — taxonomy
+  is small enough to pass in full per dimension).
+- One LLM call per dimension per explanation (4 calls total), each scored
+  independently against that dimension's specific taxonomy nodes.
+- Tiered model calls: Ollama (local Qwen) as tier 1, escalates to Gemini API
+  automatically on schema-validation failure.
+- Structured output enforced via Pydantic (`DimensionResult`, `DiagnosisResult`).
+
+## Validation results (first pass against golden_set.csv)
+
+| Dimension | Accuracy |
+|---|---|
+| Completeness | ~0.65–0.70 |
+| Accuracy | ~0.65–0.70 |
+| Clarity | **0.25** |
+| Coherence | ~0.65–0.70 |
+
+Three dimensions are in a reasonable initial range for a first pass;
+**clarity is a clear outlier and needs investigation before assuming a fix.**
+
+## Working hypothesis: insufficient / imbalanced training-adjacent data for clarity
+
+This is plausible and consistent with an earlier finding: during taxonomy
+construction, the clarity dimension ended up with the fewest real examples
+across both source datasets (SocraTeach and MathDial skew heavily toward
+accuracy and completeness-type errors; genuinely ambiguous-wording examples
+were comparatively rare). A thin, unrepresentative golden-set sample for
+clarity would produce noisy, low, and not-very-meaningful accuracy numbers
+almost regardless of prompt quality.
+
+## Other causes worth ruling out before adding data (do these first — cheaper to check)
+
+1. **Check the actual failure pattern, not just the score.** Open
+   `evaluation/eval_results.csv`, filter to `dimension == "clarity"`, and read
+   the individual `predicted_score` vs `true_score` mismatches directly. This
+   takes a few minutes and tells you *whether* it's a data-volume problem or
+   something else — e.g.:
+   - If predictions are consistently too harsh/lenient in one direction
+     (e.g. always predicting "issue" when true label is "no issue") — that's
+     a **prompt-calibration problem**, not a data problem. Fix: revise the
+     clarity prompt's threshold language in `prompts.py`.
+   - If predictions look essentially random with no consistent pattern —
+     more consistent with genuine data thinness or a definitionally fuzzy
+     dimension.
+2. **Check how many golden-set rows actually have a ground-truth clarity
+   label at all.** If clarity has far fewer labeled rows than the other three
+   dimensions, the 0.25 score is being computed over a much smaller, noisier
+   sample — a couple of wrong predictions on a tiny sample swings the
+   percentage a lot more than it would for a well-populated dimension.
+```python
+   df["clarity_score"].notna().sum()  # compare against completeness/accuracy/coherence counts
+```
+3. **Re-check the clarity dimension definition itself for ambiguity.**
+   Clarity was, by nature, the hardest dimension to define crisply during
+   Phase 1 (many candidate "clarity" issues turned out to actually be
+   accuracy issues on closer inspection). If the *prompt's* definition of
+   clarity is still loosely worded, the model may be making the same category
+   errors your own labeling process ran into early on.
+
+## Next steps
+- Run the diagnostic checks above before committing to "add more data" as the
+  fix — it's a valid hypothesis but not yet confirmed as the root cause.
+- If data volume is confirmed as the bottleneck: prioritize finding/labeling
+  more genuine clarity examples (vague pronouns, ambiguous referents) from
+  the unused rows in `taxonomy_final_50.csv` / `taxonomy_misconception_50.csv`
+  before pulling in more raw dataset volume.
+- If it's a prompt-calibration issue instead: revise `DIMENSION_DEFINITIONS["clarity"]`
+  in `prompts.py` with sharper examples of what counts as ambiguous vs. simply
+  terse, then re-run `eval_harness.py` — no new data needed.
+- Completeness/accuracy/coherence are at an acceptable first-pass level but
+  not yet "done" — plan to keep an eye on them as the golden set grows,
+  rather than treating 0.65–0.70 as a final number.
+
+## Exit condition for this phase (not yet met)
+All four dimensions at a reasonable, consistent accuracy level against the
+golden set. Currently 3 of 4 are in range; clarity needs root-cause
+investigation before the phase can be considered validated and closed.
