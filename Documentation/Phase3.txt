@@ -84,3 +84,105 @@ almost regardless of prompt quality.
 All four dimensions at a reasonable, consistent accuracy level against the
 golden set. Currently 3 of 4 are in range; clarity needs root-cause
 investigation before the phase can be considered validated and closed.
+
+
+# Phase 3: Diagnosis Agent — Base Built, Bugs Fixed, Validation In Progress
+
+## What was built
+`DiagnosisAgent` — takes a question, student explanation, and reference
+answer, and returns a `DiagnosisResult` with a 0/1/2 score, matched taxonomy
+`gap_tags`, and a one-sentence reasoning justification, per dimension
+(completeness, accuracy, clarity, coherence).
+
+## Architecture
+- Retrieval is a plain lookup against `taxonomy.yaml` (no vector DB — taxonomy
+  is small enough to pass in full per dimension).
+- One LLM call per dimension per explanation (4 calls total), each scored
+  independently against that dimension's specific taxonomy nodes.
+- Tiered model calls: Ollama (local Qwen) as tier 1, escalates to Gemini API
+  automatically on schema-validation failure.
+- Structured output enforced via Pydantic (`DimensionResult`, `DiagnosisResult`).
+
+## Validation results (first pass against golden_set.csv)
+
+| Dimension | Accuracy |
+|---|---|
+| Completeness | ~0.65–0.70 |
+| Accuracy | ~0.65–0.70 |
+| Clarity | **0.25** |
+| Coherence | ~0.65–0.70 |
+
+Three dimensions in a reasonable initial range; clarity flagged as an outlier
+requiring investigation (see bugs below — partially explained, not fully
+resolved).
+
+## Bugs found and fixed
+
+### Bug 1: Model could hallucinate gap IDs not present in taxonomy.yaml
+**Symptom:** `matched_gap_ids` sometimes contained IDs that don't exist in
+`taxonomy.yaml` — including for `clarity`, which currently has zero nodes
+defined, yet the model still returned non-empty `matched_gap_ids` for it.
+
+**Fix, in `prompts.py`:** `build_dimension_prompt` now branches on whether
+the dimension has any taxonomy nodes. When empty, the prompt explicitly
+states: *"No known misconception patterns are defined for this dimension
+yet. You MUST return matched_gap_ids as an empty list []."* — replacing what
+was previously a blank section the model could fill with invented content.
+
+**Fix, in `agent.py`:** Added `filter_gap_ids(result, valid_ids)` as a hard
+post-processing filter, applied to every dimension on every call (not a
+dimension-specific patch):
+- Builds `valid_ids` from the exact same `nodes` list passed to that
+  dimension's prompt — structurally coupled, so the filter can't drift out
+  of sync with what the model was actually shown.
+- Drops any `matched_gap_id` not in that set, and emits a `warnings.warn()`
+  listing the dropped IDs (so silent corruption becomes visible in logs).
+- When `valid_ids` is empty (clarity, currently), all returned IDs are
+  zeroed out regardless of what the model returned — defense in depth even
+  if the prompt-level instruction is ignored.
+
+### Bug 2: Non-string/placeholder input reached the LLM unchecked
+**Symptom:** A diagnosis call was made where `student_explanation` was
+literally Python's `Ellipsis` object (`...`), stringified and sent to the
+model as real text. The model confidently scored this fake input as a
+mostly-passable explanation instead of rejecting it.
+
+**Fix, in `agent.py`:** Added `is_diagnosable(explanation)` as an input
+guard, called at the top of `diagnose()` before any LLM call:
+- Rejects non-`str` types (catches `...`, `None`, `int`, etc.)
+- Rejects strings under 5 characters after stripping
+- Rejects a fixed set of known non-answers: `{"...", "idk", "i don't know",
+  "n/a", "na", "?", "idk.", "dunno"}`
+- Raises `ValueError` loudly on failure rather than silently proceeding —
+  ensures the LLM is never called on invalid input.
+
+Note: this is a temporary stand-in for the future Gate agent, not a
+replacement for it — it stops the immediate symptom (garbage input reaching
+diagnosis) but doesn't handle richer cases (off-topic answers, students
+asking clarifying questions) that the real Gate agent will own.
+
+## Testing
+`test_diagnosis_agent.py` — 4 test classes, ~25 cases, covering:
+- Every code path in `filter_gap_ids` (valid IDs kept, invalid dropped,
+  empty-taxonomy case fully zeroed, warning emitted correctly)
+- Every code path in `is_diagnosable` (non-string types, short strings,
+  known non-answer phrases, valid input passes through)
+- Integration tests confirming the LLM is never reached when `is_diagnosable`
+  rejects input (mocked LLM call assertion — call count stays zero)
+
+Run with: `python -m pytest tests/ -v`
+
+## Open item
+Bug 1's fix may partially explain the low clarity accuracy (hallucinated IDs
+could have been silently corrupting eval matches before the filter existed).
+**Re-run `python -m evaluation.eval_harness` after these fixes** and compare
+the clarity number against the original 0.25 — if it improves, that
+confirms hallucination was a contributing factor; if it stays low, the
+data/labeling-volume hypothesis from before is still the more likely
+explanation and should be investigated next (see `eval_results.csv`
+row-level review, as previously planned).
+
+## Exit condition for this phase (not yet fully met)
+All four dimensions at a reasonable, consistent accuracy level against the
+golden set, with hallucination risk controlled. Re-validation after these
+fixes is the next required step before declaring this phase closed.
