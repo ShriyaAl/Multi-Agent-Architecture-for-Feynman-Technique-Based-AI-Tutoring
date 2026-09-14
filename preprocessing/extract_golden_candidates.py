@@ -2,9 +2,9 @@ import pandas as pd
 from pathlib import Path
 
 # --- Config ---
-SOCRATEACH_PATH = "preprocessing/output/taxonomy_final_50.csv"
-MATHDIAL_PATH = "preprocessing/output/taxonomy_misconception_50.csv"
-OUTPUT_PATH = "output/golden_set_candidates.csv"
+SOCRATEACH_PATH = "preprocessing/output/taxonomy_draft.csv"
+MATHDIAL_PATH = "preprocessing/output/mathdial_draft.csv"
+OUTPUT_PATH = "preprocessing/output/golden_set_candidates.csv"
 
 TARGET_DIAGNOSABLE_PER_SOURCE = 10
 TARGET_NEGATIVE_CONTROLS = 5

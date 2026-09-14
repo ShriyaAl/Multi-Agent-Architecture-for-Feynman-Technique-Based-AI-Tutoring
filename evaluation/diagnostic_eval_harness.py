@@ -21,7 +21,6 @@ def main():
         )
         for dim in DIMENSIONS:
             predicted_score = getattr(diagnosis, dim).score
-            predicted_reasoning = getattr(diagnosis, dim).reasoning
             true_score_col = f"{dim}_score"
             true_score = row.get(true_score_col)
             results.append({
@@ -31,7 +30,6 @@ def main():
                 "true_score": true_score,
                 "predicted_label": score_to_label(predicted_score),
                 "true_label": score_to_label(true_score) if pd.notna(true_score) else None,
-                "reasoning": predicted_reasoning,
             })
 
     results_df = pd.DataFrame(results)

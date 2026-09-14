@@ -1,8 +1,8 @@
 import pandas as pd
 
-SOCRATEACH_PATH = "preprocessing/output/taxonomy_final_50.csv"
-MATHDIAL_PATH = "preprocessing/output/taxonomy_misconception_50.csv"
-OUTPUT_PATH = "preprocessing/golden_set/taxonomy_consolidation_helper.csv"
+SOCRATEACH_PATH = "preprocessing/output/taxonomy_draft.csv"
+MATHDIAL_PATH = "preprocessing/output/mathdial_draft.csv"
+OUTPUT_PATH = "preprocessing/output/taxonomy_consolidation_helper.csv"
 
 def main():
     frames = []
