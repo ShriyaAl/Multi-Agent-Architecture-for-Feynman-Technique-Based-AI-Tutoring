@@ -77,3 +77,5 @@ eval_runs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+evaluation/

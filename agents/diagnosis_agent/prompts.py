@@ -14,6 +14,17 @@ DIMENSION_ORDER_NOTE = (
 
 def build_dimension_prompt(dimension: str, question: str, student_explanation: str,
                             reference_answer: str, taxonomy_nodes_text: str) -> str:
+    if taxonomy_nodes_text.strip():
+        gap_section = (
+            "Known misconception patterns for this dimension (use these IDs if the student's\n"
+            f"explanation matches one; otherwise leave matched_gap_ids empty):\n{taxonomy_nodes_text}"
+        )
+    else:
+        gap_section = (
+            "No known misconception patterns are defined for this dimension yet. "
+            "You MUST return matched_gap_ids as an empty list []."
+        )
+
     return f"""You are evaluating a middle-school student's explanation of a math problem,
 specifically for the "{dimension}" dimension.
 
@@ -26,9 +37,7 @@ Reference answer/reasoning: {reference_answer}
 
 Student's explanation: {student_explanation}
 
-Known misconception patterns for this dimension (use these IDs if the student's
-explanation matches one; otherwise leave matched_gap_ids empty):
-{taxonomy_nodes_text}
+{gap_section}
 
 Respond in this exact JSON structure:
 {{
